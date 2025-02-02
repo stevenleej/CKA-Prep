@@ -452,9 +452,72 @@ $ kubectl create secret generic app-secret --from-file=app_secret.properties
 ```
 
 We can encode and decode a secret
-```
 ```bash
 kubectl get secrets/db-user-pass --template={{.<key>.value}} | base64 -d
 ```
+
+# Custom Resource Definitions and Operators
+
+## CRDs
+
+[CRDs Docs link](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)
+
+Custom resources are an extension of the Kubernetes API. Think of it as a customization feature of a Kubernetes installation. 
+- Cluster admins must manage the CRs independently of the cluster. But, it is possible to access it via kubectl once the definition of the resource is created. (resources are but an endpoint of the K8s api storing a collection of API objects which forms a `kind`)
+
+![[Screenshot 2025-02-02 at 3.26.35 PM.png]]
+
+Custom Resource Definition
+```YAML
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+	name: my.api.com
+spec:
+	scope: Namespaced <--- tells us if scoped by namespace
+	group: dragonquestmob.com/v1
+	names:
+		kind: RPGMob
+		singular: RPGmob
+		plural: RPGmobs
+		shortnames:
+		- mob
+	versions:
+		- name: v1
+		  served: true  <- choose which version served to API
+		  storage: true
+	schema:
+		openAPIV3Schema: <-- tells what all possible fields are supported
+			type: object
+			properties:
+				spec:
+				  type: object
+				  properties:
+				    hp:
+				      type: integer
+				    name:
+					  type: string
+				[...] 
 ```
 
+
+Custom Resource
+```YAML
+apiVersion: dragonquestmob.com/v1
+kind: RPGMob
+metadata:
+	name: slime-mob
+spec:
+	hp: 2
+	name: slime
+	region: Fortuna-area
+```
+
+
+## Operator
+- Controller runs in a loop and watches the cluster and listens to events related to the designated custom resource(s)
+- Kubernetes has a template for controllers labeled as [sample controller](https://github.com/kubernetes/sample-controller)
+
+An example of a popular operator is the ETCd operator which has CRDS for etcd clusters, backups and restores, allowing you to deploy, backup and restore ETCd for Kubernetes.
+
+[operator-hub](https://operatorhub.io/)

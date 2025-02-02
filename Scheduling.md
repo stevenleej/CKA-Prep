@@ -1,4 +1,3 @@
-
 # Scheduling
 
 ## Manual Scheduling
@@ -574,6 +573,7 @@ Resources in questions can range to things such as:
 Priority: It allows us to define what pods are more important than others. It becomes useful in situations of limited resources in a node that multiple pods are trying to claim for their workload. Of course, higher priority will be prioritized and lower priority pods will be evicted from the node.
 
 ```yaml
+
 # We define priority with a PriorityClass object
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
@@ -746,9 +746,92 @@ spec:
 ```
 
 
+## Admission Controllers
+
+- A way to enforce more security measures than RBAC / authorization (ex: permit certain registries, enforce labels, etc.)
+- e.g. the admission controllers performs additional operations before the request to create a new pod gets processed and the pod is created
+- Built-in admission controllers
+	- AlwaysPullImages (ensure image is always pulled)
+	- DefaultStorageClass
+		- Observes creation of PVCs and adds the default if not specified
+	- EventRateLimit (limit flooding of req. to API Server)
+	- NamespaceExists (reject req. to non-existent ns) 
+	- NamespaceAutoProvision (not enabled by default) --> deprecated in favour of namespacelifecycle
+		- Auto creates namespaces that does not exists (e.g. when calling `kubectl run pod --namespace not-existing`)
+
+```BASH
+# Viewing enabled Admissions Controllers
+$ kube-apiserver -h | grep enable-admission-plugins
+# for kubeadm clusters
+$ kubectl exec kube-apiserver-controlplane -n kube-system -- kube-apiserver -h | grep enable-admission-plugins 
+```
+
+To add Admission Controllers, modify:
+`kube-apiserver.service` or `/etc/kubernetes/manifests/kubeapiserver.yaml`
+
+`--enable-admission-plugins` to enable admission controllers
+`--disable-admission-plugins` to disable default enabled admissions controllers
+
+## Validating and Mutating Admission Controllers
+Validating Admission Controller: validates an object and determines to allow or deny
+
+Ex: DefaultStorageClass
+- Request goes to the admission controller, and if a storage class is not defined, then it will modify the request to add this "default" storage class.
+- So when the pvc is created, a `StorageClass: default` is added
+- This is what we call a mutating admission controllers
+
+Mutating Admission Controller: Changes the request as per our specification
+- Generally, mutating **runs first** before the validating controller. 
+
+What if we want our own admission controller with our own mutation and validation?
+- `MutatingAdmissionWebhook`
+- `ValidatingAdmissionWebhook`
+
+We can configure these webhooks to point to a server (internal to cluster or external server) which takes care of processing the request. 
+
+After a request goes through, and all the admission controllers processes, the webhook triggers.
+- Then a call to the admission webhook server is called, with an `AdmissionReview` kind object passed in .json format
+	- Info about the object, who / when made the req. are all provided
+
+The Admission Webhook Server responds back with an `AdmissionReviewed` object containing a `response` section.
+- If the `allowed` field inside `response` is true, req. is allowed
+- If false, then it is rejected
+
+Step 1: Deploy your webhook server (API Server on any platform) on K8s as a deployment + svc or on an external platform 
+
+Step 2: Create a `ValidatingWebhook` kind object 
+
+
+`ValidatingWebhookConfiguration`
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+webhooks:
+  - name: my-webhook.example.com
+   
+    clientConfig: <--- Where we define the location of our server
+	    url: "https://some-external-server-example.com"
+
+	clientConfig: <-- When the service is defined inside the cluster
+		service:  
+			  namespace: "my-webhook-namespace"
+			  name: "name of webhook service"
+		caBundle: "some tls cert bundles"
+
+	rules: <-- allows us to define when the validating webhook is triggered
+      - operations: ["CREATE"]
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources: ["*"]
+        scope: "*"
+```
 
 
 
+
+
+
+```
 # Imperative Commands
 ```bash
 # create a pod
