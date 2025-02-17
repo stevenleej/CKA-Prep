@@ -46,7 +46,9 @@ spec:
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Recycle
+  hostPath: <-- can define the host path 
+	path: <some host path> 
+  persistentVolumeReclaimPolicy: Recycle <-- define reclaim policy once deleted
   storageClassName: slow
   mountOptions: <-- perhaps definition differs per cloud providers
     - hard
@@ -66,7 +68,6 @@ spec:
   accessModes:
     - ReadWriteOnce
   volumeMode: Filesystem
-  persistentVolumeReclaimPolicy: Retain <-- tells us to keep the volume even when we delete the PVC
   resources:
     requests:
       storage: 8Gi
@@ -105,3 +106,12 @@ spec:
         claimName: myclaim
 ```
 
+
+### Storage Classes
+Allows us to describe a class of storage for a volume. (in the case of cloud providers, it's like defining a PV as being an EBS volume from AWS)
+
+### Dynamic Provisioning
+- We define a provisioner ahead and have it attach to a PV atuomatically. 
+
+### Static Provisiong
+- Provisioning the volume in your cloud provider or in your bare-metal manually before assigning it to the PV

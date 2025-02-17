@@ -150,3 +150,39 @@ spec:
       port: 80
 ```
 
+
+Network policies are additive. If there is any NetworkPolicy allowing a certain type of traffic, that traffic will be allowed even if another Network Policy would block it. This is due to the principle of **explicit allow** over **implicit deny** 
+
+A good tip to setting up Network Policies are to ensure deny all, and then allow granularly traffic per design of workloads
+
+## Examples
+
+Default Deny all policy
+```
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+```
+
+This default policy ensures no unauthorized access occurs in any of the pods (in this case, in the NS default)
+
+
+```
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress-null
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress: [] ---> this is "null", denoting no traffic
+```
+
